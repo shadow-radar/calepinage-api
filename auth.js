@@ -58,4 +58,3 @@ function isAuthenticated() {
 }
 
 module.exports = { getAuthUrl, getTokenFromCode, getAuthenticatedClient, isAuthenticated };
-
