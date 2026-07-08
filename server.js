@@ -4,11 +4,13 @@
 // ============================================================
 require('dotenv').config();
 
-const express = require('express');
-const cors    = require('cors');
-const meteo   = require('./meteo');
-const notifs  = require('./notifs');
-const cron    = require('./cron');
+const express  = require('express');
+const cors     = require('cors');
+const meteo    = require('./meteo');
+const notifs   = require('./notifs');
+const cron     = require('./cron');
+const auth     = require('./auth');
+const calendar = require('./calendar');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -116,6 +118,59 @@ app.get('/', function(req, res) {
       'POST /push/test'
     ]
   });
+});
+
+// ============================================================
+//  ROUTES GOOGLE CALENDAR
+// ============================================================
+
+// GET /auth/google — démarrer l'auth OAuth (une seule fois)
+app.get('/auth/google', function(req, res) {
+  var url = auth.getAuthUrl();
+  res.redirect(url);
+});
+
+// GET /auth/callback — callback OAuth Google
+app.get('/auth/callback', async function(req, res) {
+  var code = req.query.code;
+  if (!code) return res.status(400).send('Code manquant');
+  try {
+    await auth.getTokenFromCode(code);
+    res.send('<h2>✅ Google Calendar connecté !</h2><p>Tu peux fermer cette page.</p>');
+  } catch(err) {
+    res.status(500).send('Erreur : ' + err.message);
+  }
+});
+
+// GET /auth/status — vérifier si connecté
+app.get('/auth/status', function(req, res) {
+  res.json({ authenticated: auth.isAuthenticated() });
+});
+
+// POST /calendar/sync — synchroniser un chantier
+app.post('/calendar/sync', async function(req, res) {
+  var chantier = req.body;
+  if (!chantier || !chantier.numeroDossier) {
+    return res.status(400).json({ erreur: 'Données chantier manquantes' });
+  }
+  try {
+    var resultats = await calendar.syncChantier(chantier);
+    res.json({ ok: true, resultats });
+  } catch(err) {
+    res.status(500).json({ erreur: err.message });
+  }
+});
+
+// DELETE /calendar/sync — supprimer les events d'un chantier
+app.delete('/calendar/sync', async function(req, res) {
+  var nomProjet = req.body.nomProjet;
+  if (!nomProjet) return res.status(400).json({ erreur: 'nomProjet manquant' });
+  try {
+    await calendar.supprimerEvenementsChantier(nomProjet);
+    res.json({ ok: true });
+  } catch(err) {
+    res.status(500).json({ erreur: err.message });
+  }
 });
 
 // ============================================================
