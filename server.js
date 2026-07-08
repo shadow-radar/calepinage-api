@@ -1,3 +1,4 @@
+// v1.2.0 - avec auth Calendar
 // ============================================================
 //  SERVEUR EXPRESS — calepinage-api
 //  BNA Bardage — Proxy Météo + Notifications Push + Cron
